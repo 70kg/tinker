@@ -179,7 +179,7 @@ public final class DexClassesComparator {
         // Map classDesc and typeIndex to classInfo
         // and collect typeIndex of classes to check in oldDexes.
         for (Dex oldDex : oldDexGroup.dexes) {
-            int classDefIndex = 0;
+            int classDefIndex = 0;//每个类在哪个dex中
             for (ClassDef oldClassDef : oldDex.classDefs()) {
                 String desc = oldDex.typeNames().get(oldClassDef.typeIndex);
                 if (Utils.isStringMatchesPatterns(desc, patternsOfClassDescToCheck)) {
@@ -235,30 +235,29 @@ public final class DexClassesComparator {
             deletedClassInfoList.add(oldClassDescriptorToClassInfoMap.get(desc));
         }
 
-        Set<String> addedClassDescs = new HashSet<>(newDescriptorOfClassesToCheck);
-        addedClassDescs.removeAll(oldDescriptorOfClassesToCheck);
+        Set<String> addedClassDescs = new HashSet<>(newDescriptorOfClassesToCheck);//所有的新的中的class
+        addedClassDescs.removeAll(oldDescriptorOfClassesToCheck);//去除老的中的class
 
         for (String desc : addedClassDescs) {
             logger.i(TAG, "Added class: %s", desc);
-            addedClassInfoList.add(newClassDescriptorToClassInfoMap.get(desc));
+            addedClassInfoList.add(newClassDescriptorToClassInfoMap.get(desc));//留下来的就是增加的class
         }
 
         Set<String> mayBeChangedClassDescs = new HashSet<>(oldDescriptorOfClassesToCheck);
         mayBeChangedClassDescs.retainAll(newDescriptorOfClassesToCheck);
 
-        for (String desc : mayBeChangedClassDescs) {
+        for (String desc : mayBeChangedClassDescs) {//新旧中都有的class
             DexClassInfo oldClassInfo = oldClassDescriptorToClassInfoMap.get(desc);
             DexClassInfo newClassInfo = newClassDescriptorToClassInfoMap.get(desc);
             switch (compareMode) {
-                case COMPARE_MODE_NORMAL: {
+                case COMPARE_MODE_NORMAL: {//新 旧中的同名class 改变了
                     if (!isSameClass(
                             oldClassInfo.owner,
                             newClassInfo.owner,
                             oldClassInfo.classDef,
-                            newClassInfo.classDef
-                    )) {
+                            newClassInfo.classDef)) {
                         logger.i(TAG, "Changed class: %s", desc);
-                        changedClassDescToClassInfosMap.put(
+                        changedClassDescToClassInfosMap.put(//添加改变的
                                 desc, new DexClassInfo[]{oldClassInfo, newClassInfo}
                         );
                     }

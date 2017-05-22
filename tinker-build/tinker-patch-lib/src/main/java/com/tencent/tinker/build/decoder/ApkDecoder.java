@@ -41,10 +41,10 @@ public class ApkDecoder extends BaseDecoder {
     private final File mOldApkDir;
     private final File mNewApkDir;
 
-    private final ManifestDecoder      manifestDecoder;
-    private final UniqueDexDiffDecoder dexPatchDecoder;
-    private final BsDiffDecoder        soPatchDecoder;
-    private final ResDiffDecoder       resPatchDecoder;
+    private final ManifestDecoder manifestDecoder;//检测是否增加了四大组件  关于dexMode的检测提示
+    private final UniqueDexDiffDecoder dexPatchDecoder;//dex 的patch
+    private final BsDiffDecoder soPatchDecoder;//so 的patch
+    private final ResDiffDecoder resPatchDecoder;//资源的patch
 
     /**
      * if resource's file is also contain in dex or library pattern,
@@ -71,7 +71,7 @@ public class ApkDecoder extends BaseDecoder {
         String apkName = file.getName();
         if (!apkName.endsWith(TypedValue.FILE_APK)) {
             throw new TinkerPatchException(
-                String.format("input apk file path must end with .apk, yours %s\n", apkName)
+                    String.format("input apk file path must end with .apk, yours %s\n", apkName)
             );
         }
 
@@ -106,21 +106,22 @@ public class ApkDecoder extends BaseDecoder {
     public boolean patch(File oldFile, File newFile) throws Exception {
         writeToLogFile(oldFile, newFile);
         //check manifest change first
-        manifestDecoder.patch(oldFile, newFile);
+        manifestDecoder.patch(oldFile, newFile);//检查版本 是使用raw还是jar  检查是否包换四大组件
 
-        unzipApkFiles(oldFile, newFile);
+        unzipApkFiles(oldFile, newFile);//解压老的  新的apk 到build/output/tinkerpatch/debug/apkname
 
+        //遍历解压后的new apk目录
         Files.walkFileTree(mNewApkDir.toPath(), new ApkFilesVisitor(config, mNewApkDir.toPath(), mOldApkDir.toPath(), dexPatchDecoder, soPatchDecoder, resPatchDecoder));
 
         //get all duplicate resource file
         for (File duplicateRes : resDuplicateFiles) {
 //            resPatchDecoder.patch(duplicateRes, null);
             Logger.e("Warning: res file %s is also match at dex or library pattern, "
-                + "we treat it as unchanged in the new resource_out.zip", getRelativePathStringToOldFile(duplicateRes));
+                    + "we treat it as unchanged in the new resource_out.zip", getRelativePathStringToOldFile(duplicateRes));
         }
 
         soPatchDecoder.onAllPatchesEnd();
-        dexPatchDecoder.onAllPatchesEnd();
+        dexPatchDecoder.onAllPatchesEnd();//开始生成 保存patch文件
         manifestDecoder.onAllPatchesEnd();
         resPatchDecoder.onAllPatchesEnd();
 
@@ -136,12 +137,12 @@ public class ApkDecoder extends BaseDecoder {
     }
 
     class ApkFilesVisitor extends SimpleFileVisitor<Path> {
-        BaseDecoder     dexDecoder;
-        BaseDecoder     soDecoder;
-        BaseDecoder     resDecoder;
-        Configuration   config;
-        Path            newApkPath;
-        Path            oldApkPath;
+        BaseDecoder dexDecoder;
+        BaseDecoder soDecoder;
+        BaseDecoder resDecoder;
+        Configuration config;
+        Path newApkPath;
+        Path oldApkPath;
 
         ApkFilesVisitor(Configuration config, Path newPath, Path oldPath, BaseDecoder dex, BaseDecoder so, BaseDecoder resDecoder) {
             this.config = config;
@@ -153,7 +154,7 @@ public class ApkDecoder extends BaseDecoder {
         }
 
         @Override
-        public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+        public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {//遍历释放apk文件夹下面的所有文件
 
             Path relativePath = newApkPath.relativize(file);
 
@@ -166,6 +167,7 @@ public class ApkDecoder extends BaseDecoder {
             }
             String patternKey = relativePath.toString().replace("\\", "/");
 
+            //如果符合前面定义的dex规则   dexPattern:classes.*\.dex   dexPattern:assets/secondary-dex-.\.jar
             if (Utils.checkFileInPattern(config.mDexFilePattern, patternKey)) {
                 //also treat duplicate file as unchanged
                 if (Utils.checkFileInPattern(config.mResFilePattern, patternKey) && oldFile != null) {
@@ -173,7 +175,7 @@ public class ApkDecoder extends BaseDecoder {
                 }
 
                 try {
-                    dexDecoder.patch(oldFile, file.toFile());
+                    dexDecoder.patch(oldFile, file.toFile());//对dex进行查分对比
                 } catch (Exception e) {
 //                    e.printStackTrace();
                     throw new RuntimeException(e);

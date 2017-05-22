@@ -103,7 +103,7 @@ public final class ExcludedClassModifiedChecker {
                         } else if (newFile == null) {
                             stmCode = STMCODE_ERROR_PRIMARY_NEW_DEX_IS_MISSING;
                         } else {
-                            dexCmptor.startCheck(oldDex, newDex);
+                            dexCmptor.startCheck(oldDex, newDex);//进行对比
                             deletedClassInfos = dexCmptor.getDeletedClassInfos();
                             addedClassInfos = dexCmptor.getAddedClassInfos();
                             changedClassInfosMap = new HashMap<>(dexCmptor.getChangedClassDescToInfosMap());
@@ -214,6 +214,7 @@ public final class ExcludedClassModifiedChecker {
         }
     }
 
+    // 名字为classes.dex
     public boolean isPrimaryDex(File dexFile) {
         Path dexFilePath = dexFile.toPath();
         Path parentPath = config.mTempUnzipOldDir.toPath();

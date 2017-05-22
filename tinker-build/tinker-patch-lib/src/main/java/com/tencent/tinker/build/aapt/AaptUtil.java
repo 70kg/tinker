@@ -78,6 +78,12 @@ public final class AaptUtil {
         return collectResource(resourceDirectoryList, null);
     }
 
+    /**
+     * res 目录下的文件
+     * @param resourceDirectoryList
+     * @param rTypeResourceMap
+     * @return
+     */
     public static AaptResourceCollector collectResource(List<String> resourceDirectoryList, Map<RType, Set<RDotTxtEntry>> rTypeResourceMap) {
         AaptResourceCollector resourceCollector = new AaptResourceCollector(rTypeResourceMap);
         List<com.tencent.tinker.build.aapt.RDotTxtEntry> references = new ArrayList<com.tencent.tinker.build.aapt.RDotTxtEntry>();

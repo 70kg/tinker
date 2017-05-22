@@ -47,7 +47,7 @@ public class ManifestDecoder extends BaseDecoder {
             //check minSdkVersion
             int minSdkVersion = Integer.parseInt(oldAndroidManifest.apkMeta.getMinSdkVersion());
 
-            if (minSdkVersion < TypedValue.ANDROID_40_API_LEVEL) {
+            if (minSdkVersion < TypedValue.ANDROID_40_API_LEVEL) {//api 14
                 if (config.mDexRaw) {
                     if (ignoreWarning) {
                         //ignoreWarning, just log

@@ -128,6 +128,7 @@ public abstract class TinkerApplication extends Application {
         applicationStartElapsedTime = SystemClock.elapsedRealtime();
         applicationStartMillisTime = System.currentTimeMillis();
         loadTinker();
+        //生成applicationLike
         ensureDelegate();
         applicationLike.onBaseContextAttached(base);
         //reset save mode

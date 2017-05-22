@@ -42,17 +42,17 @@ import java.util.HashSet;
  * Created by zhangshaowen on 16/8/8.
  */
 public class ResDiffDecoder extends BaseDecoder {
-    private static final String TEST_RESOURCE_NAME        = "only_use_to_test_tinker_resource.txt";
+    private static final String TEST_RESOURCE_NAME = "only_use_to_test_tinker_resource.txt";
     private static final String TEST_RESOURCE_ASSETS_PATH = "assets/" + TEST_RESOURCE_NAME;
 
-    private static final String TEMP_RES_ZIP  = "temp_res.zip";
+    private static final String TEMP_RES_ZIP = "temp_res.zip";
     private static final String TEMP_RES_7ZIP = "temp_res_7ZIP.zip";
-    private final InfoWriter                     logWriter;
-    private final InfoWriter                     metaWriter;
-    private       ArrayList<String>              addedSet;
-    private       ArrayList<String>              modifiedSet;
-    private       ArrayList<String>              largeModifiedSet;
-    private       HashMap<String, LargeModeInfo> largeModifiedMap;
+    private final InfoWriter logWriter;
+    private final InfoWriter metaWriter;
+    private ArrayList<String> addedSet;
+    private ArrayList<String> modifiedSet;
+    private ArrayList<String> largeModifiedSet;
+    private HashMap<String, LargeModeInfo> largeModifiedMap;
     private ArrayList<String> deletedSet;
 
     public ResDiffDecoder(Configuration config, String metaPath, String logPath) throws IOException {
@@ -108,11 +108,12 @@ public class ResDiffDecoder extends BaseDecoder {
 
         File outputFile = getOutputPath(newFile).toFile();
 
-        if (oldFile == null || !oldFile.exists()) {
+        if (oldFile == null || !oldFile.exists()) {//发现新增的资源文件
             if (Utils.checkFileInPattern(config.mResIgnoreChangePattern, name)) {
                 Logger.e("found add resource: " + name + " ,but it match ignore change pattern, just ignore!");
                 return false;
             }
+            //复制到tinker_result的目录下
             FileOperation.copyFileUsingStream(newFile, outputFile);
             addedSet.add(name);
             writeResLog(newFile, oldFile, TypedValue.ADD);
@@ -148,11 +149,13 @@ public class ResDiffDecoder extends BaseDecoder {
         return true;
     }
 
+    //处理修改的资源
     private boolean dealWithModeFile(String name, String newMd5, File oldFile, File newFile, File outputFile) throws IOException {
         if (checkLargeModFile(newFile)) {
             if (!outputFile.getParentFile().exists()) {
                 outputFile.getParentFile().mkdirs();
             }
+            //资源使用BSD进行diff
             BSDiff.bsdiff(oldFile, newFile, outputFile);
             //treat it as normal modify
             if (Utils.checkBsDiffFileSize(outputFile, newFile)) {
@@ -181,25 +184,25 @@ public class ResDiffDecoder extends BaseDecoder {
                     relative = getRelativePathStringToNewFile(newFile);
                     Logger.d("Found add resource: " + relative);
                     log = "add resource: " + relative + ", oldSize=" + FileOperation.getFileSizes(oldFile) + ", newSize="
-                        + FileOperation.getFileSizes(newFile);
+                            + FileOperation.getFileSizes(newFile);
                     break;
                 case TypedValue.MOD:
                     relative = getRelativePathStringToNewFile(newFile);
                     Logger.d("Found modify resource: " + relative);
                     log = "modify resource: " + relative + ", oldSize=" + FileOperation.getFileSizes(oldFile) + ", newSize="
-                        + FileOperation.getFileSizes(newFile);
+                            + FileOperation.getFileSizes(newFile);
                     break;
                 case TypedValue.DEL:
                     relative = getRelativePathStringToOldFile(oldFile);
                     Logger.d("Found deleted resource: " + relative);
                     log = "deleted resource: " + relative + ", oldSize=" + FileOperation.getFileSizes(oldFile) + ", newSize="
-                        + FileOperation.getFileSizes(newFile);
+                            + FileOperation.getFileSizes(newFile);
                     break;
                 case TypedValue.LARGE_MOD:
                     relative = getRelativePathStringToNewFile(newFile);
                     Logger.d("Found large modify resource: " + relative + " size:" + newFile.length());
                     log = "large modify resource: " + relative + ", oldSize=" + FileOperation.getFileSizes(oldFile) + ", newSize="
-                        + FileOperation.getFileSizes(newFile);
+                            + FileOperation.getFileSizes(newFile);
                     break;
             }
             logWriter.writeLineToInfoFile(log);
@@ -217,7 +220,7 @@ public class ResDiffDecoder extends BaseDecoder {
         addedSet.add(TEST_RESOURCE_ASSETS_PATH);
         Logger.d("Add Test resource file: " + TEST_RESOURCE_ASSETS_PATH);
         String log = "add test resource: " + TEST_RESOURCE_ASSETS_PATH + ", oldSize=" + 0 + ", newSize="
-            + FileOperation.getFileSizes(dest);
+                + FileOperation.getFileSizes(dest);
         logWriter.writeLineToInfoFile(log);
     }
 
@@ -239,7 +242,7 @@ public class ResDiffDecoder extends BaseDecoder {
         if (config.mUsingGradle) {
             final boolean ignoreWarning = config.mIgnoreWarning;
             final boolean resourceArscChanged = modifiedSet.contains(TypedValue.RES_ARSC)
-                || largeModifiedSet.contains(TypedValue.RES_ARSC);
+                    || largeModifiedSet.contains(TypedValue.RES_ARSC);
             if (resourceArscChanged && !config.mUseApplyResource) {
                 if (ignoreWarning) {
                     //ignoreWarning, just log
@@ -248,7 +251,7 @@ public class ResDiffDecoder extends BaseDecoder {
                     Logger.e("Warning:ignoreWarning is false, but resources.arsc is changed, you should use applyResourceMapping mode to build the new apk, otherwise, it may be crash at some times");
 
                     throw new TinkerPatchException(
-                        String.format("ignoreWarning is false, but resources.arsc is changed, you should use applyResourceMapping mode to build the new apk, otherwise, it may be crash at some times")
+                            String.format("ignoreWarning is false, but resources.arsc is changed, you should use applyResourceMapping mode to build the new apk, otherwise, it may be crash at some times")
                     );
                 }
             } /*else if (config.mUseApplyResource) {
@@ -274,7 +277,7 @@ public class ResDiffDecoder extends BaseDecoder {
 
         // last add test res in assets for user cannot ignore it;
         addAssetsFileForTestResource();
-
+        //临时的只包含patch资源的zip 用于下一步全量合成
         File tempResZip = new File(config.mOutFolder + File.separator + TEMP_RES_ZIP);
         final File tempResFiles = config.mTempResultDir;
 
@@ -282,12 +285,13 @@ public class ResDiffDecoder extends BaseDecoder {
         FileOperation.zipInputDir(tempResFiles, tempResZip, null);
         File extractToZip = new File(config.mOutFolder + File.separator + TypedValue.RES_OUT);
 
+        //将patch 资源和原始资源进行合成  生成resources_out  用于查看全量合成结果
         String resZipMd5 = Utils.genResOutputFile(extractToZip, tempResZip, config,
-            addedSet, modifiedSet, deletedSet, largeModifiedSet, largeModifiedMap);
+                addedSet, modifiedSet, deletedSet, largeModifiedSet, largeModifiedMap);
 
         Logger.e("Final normal zip resource: %s, size=%d, md5=%s", extractToZip.getName(), extractToZip.length(), resZipMd5);
         logWriter.writeLineToInfoFile(
-            String.format("Final normal zip resource: %s, size=%d, md5=%s", extractToZip.getName(), extractToZip.length(), resZipMd5)
+                String.format("Final normal zip resource: %s, size=%d, md5=%s", extractToZip.getName(), extractToZip.length(), resZipMd5)
         );
         //delete temp file
         FileOperation.deleteFile(tempResZip);
@@ -302,12 +306,12 @@ public class ResDiffDecoder extends BaseDecoder {
             if (tempRes7Zip.exists()) {
 
                 String res7zipMd5 = Utils.genResOutputFile(extractTo7Zip, tempRes7Zip, config,
-                    addedSet, modifiedSet, deletedSet, largeModifiedSet, largeModifiedMap);
+                        addedSet, modifiedSet, deletedSet, largeModifiedSet, largeModifiedMap);
                 //delete temp file
                 FileOperation.deleteFile(tempRes7Zip);
                 Logger.e("Final 7zip resource: %s, size=%d, md5=%s", extractTo7Zip.getName(), extractTo7Zip.length(), res7zipMd5);
                 logWriter.writeLineToInfoFile(
-                    String.format("Final 7zip resource: %s, size=%d, md5=%s", extractTo7Zip.getName(), extractTo7Zip.length(), res7zipMd5)
+                        String.format("Final 7zip resource: %s, size=%d, md5=%s", extractTo7Zip.getName(), extractTo7Zip.length(), res7zipMd5)
                 );
             }
         }
@@ -398,9 +402,9 @@ public class ResDiffDecoder extends BaseDecoder {
     }
 
     class DeletedResVisitor extends SimpleFileVisitor<Path> {
-        Configuration     config;
-        Path              newApkPath;
-        Path              oldApkPath;
+        Configuration config;
+        Path newApkPath;
+        Path oldApkPath;
         ArrayList<String> deletedFiles;
 
         DeletedResVisitor(Configuration config, Path newPath, Path oldPath) {
